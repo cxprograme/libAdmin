@@ -86,7 +86,7 @@
 		    		<span>图书管理</span>
 					</el-col>
 					<el-col :span='12' style="text-align:right">
-						<el-button type="primary">添加图书</el-button>
+						<el-button type="primary" @click="dialogFormVisible = true">添加图书</el-button>
 						<el-button type="primary">修改图书</el-button>
 						<el-button type="primary">下架</el-button>
 					</el-col>
@@ -217,14 +217,94 @@
 	  		</el-container>
 		</el-container>
 	</el-main>
+	<el-dialog title="添加图书" :visible.sync="dialogFormVisible" >
+	  <el-form  size="mini"  label-width="80px" :model="bookform" style="padding:0 10px">
+	     	<el-form-item label="书名">
+	    		<el-input v-model="bookform.book_name"></el-input>
+	  		</el-form-item>
+		    <el-form-item label="作者">
+	    		<el-input v-model="bookform.author"></el-input>
+	  		</el-form-item>
+	  		<el-form-item label="上架时间">
+	    		<el-date-picker
+			      v-model="bookform.update_time"
+			      type="datetime"
+			      placeholder="选择日期时间">
+			    </el-date-picker>
+	  		</el-form-item>
+	  		<el-form-item label="推荐">
+			    <el-checkbox-group v-model="bookform.type">
+			      <el-checkbox label="首页" name="type"></el-checkbox>
+			      <el-checkbox label="图书借阅" name="type"></el-checkbox>
+			    </el-checkbox-group>
+			</el-form-item>
+			<el-form-item
+			    v-for="(book, index) in bookform.booknos"
+			    :label="'图书编号'"
+			    :key="book.key"
+			    :rules="{
+			      required: true, message: '图书编号不能为空', trigger: 'blur'
+			    }"
+			  >
+			  	<el-col :span='11'>
+			    	<el-input v-model="book.value"></el-input>
+				</el-col>
+				<el-col :span='11' :offset='2'>
+					<el-button @click.prevent="removeBookNo(book)">删除</el-button>
+				</el-col>
+  			</el-form-item>
+  			<el-form-item>
+			    <el-button @click="addBookNo" type='primary' style="width:46%">继续添加</el-button>
+			 </el-form-item>
+			 <el-form-item label="封面图片">
+				 <el-upload
+				  class="avatar-uploader"
+				  :action='importUrl'
+				  name='picture'
+				  :show-file-list="false"
+				  :on-success="handleAvatarSuccess"
+				  :before-upload="beforeAvatarUpload">
+				  <img v-if="imageUrl" :src="imageUrl" class="avatar">
+				  <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+				</el-upload>
+			</el-form-item>
+			<el-form-item label="图书简介">
+            <div class="edit_container">
+              <quill-editor v-model="bookform.describe"
+                            ref="myQuillEditor"
+                            class="editer"
+                            :options="editorOption" @ready="onEditorReady($event)">
+              </quill-editor>
+            </div>
+          </el-form-item>
+		</el-form>
+		<div slot="footer" class="dialog-footer">
+		    <el-button @click="dialogFormVisible = false">取 消</el-button>
+		    <el-button type="primary" @click="submit">确 定</el-button>
+		</div>
+	</el-dialog>
 </el-container>
+
 </template>
 
 <script>
+import { quillEditor } from 'vue-quill-editor' //调用编辑器
 export default {
   data() {
     return {
       value:'',
+      dialogFormVisible:false,
+      importUrl:'http://localhost:8081/menuwork/hs/back/lib/upload',
+      bookform:{
+      	book_name:'',
+      	author:'',
+      	update_time:'',
+      	type:'',
+      	booknos:[{
+      		value:''
+      	}],
+      	describe:''
+      },
       form: {
         name: '',
         region: '',
@@ -256,7 +336,26 @@ export default {
         activeName2: 'first'
     }
   },
+    components: {
+//使用编辑器
+      quillEditor
+    },
   methods: {
+  	handleAvatarSuccess(res, file) {
+        this.imageUrl = URL.createObjectURL(file.raw);
+	  },
+	  beforeAvatarUpload(file) {
+	    const isJPG = file.type === 'image/jpeg';
+	    const isLt2M = file.size / 1024 / 1024 < 2;
+	    console.log(file);
+	    if (!isJPG) {
+	      this.$message.error('上传头像图片只能是 JPG 格式!');
+	    }
+	    if (!isLt2M) {
+	      this.$message.error('上传头像图片大小不能超过 2MB!');
+	    }
+	    return isJPG && isLt2M;
+	  },
     onSubmit() {
       this.$message('submit!')
     },
@@ -268,7 +367,26 @@ export default {
     },
     handleChange(){
 
-    }
+    },
+    /**
+     * 图书添加信息
+     * @return {[type]} [description]
+     */
+    submit:function(){
+    	console.log(this.bookform);
+    },
+    removeBookNo(item) {
+        var index = this.bookform.booknos.indexOf(item)
+        if (index !== -1) {
+          this.bookform.booknos.splice(index, 1)
+        }
+	  },
+	  addBookNo() {
+	    this.bookform.booknos.push({
+	      value: '',
+	      key: Date.now()
+	    });
+	  }
   }
 }
 </script>
@@ -332,6 +450,9 @@ export default {
 	  }
 	  .el-collapse-item ul li{
 	  	list-style: none;
+	  }
+	  .el-form-item{
+	  	margin-bottom: 10px
 	  }
 </style>
 
